@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>摩友路权通 - 摩托车限行查询</title>
+<style>
+*,*:before,*:after{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#e74c3c;--primary-dark:#c0392b;--secondary:#2c3e50;--accent:#f39c12;--bg:#f5f6fa;--card:#fff;--text:#2c3e50;--text-light:#7f8c8d;--border:#ecf0f1;--success:#27ae60;--warning:#f39c12;--shadow:0 2px 12px rgba(0,0,0,.08);--radius:12px}
+html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+a{text-decoration:none;color:inherit}
+
+/* Header */
+.header{background:linear-gradient(135deg,var(--secondary) 0%,#34495e 100%);color:#fff;padding:14px 16px 10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-icon{width:34px;height:34px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.logo-text{font-size:17px;font-weight:700;letter-spacing:1px}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.7);font-weight:400}
+.header-actions{display:flex;gap:6px}
+.header-btn{background:rgba(255,255,255,.15);border:none;color:#fff;padding:5px 10px;border-radius:20px;font-size:11px;cursor:pointer;transition:background .2s}
+.header-btn:active{background:rgba(255,255,255,.3)}
+
+/* Selector */
+.selector-panel{background:rgba(255,255,255,.1);border-radius:var(--radius);padding:10px}
+.city-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.city-label{font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;min-width:42px}
+.city-select{flex:1;padding:7px 10px;border-radius:8px;border:none;font-size:14px;background:rgba(255,255,255,.95);color:var(--secondary);appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237f8c8d' stroke-width='2' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.plate-row{display:flex;gap:6px}
+.plate-btn{flex:1;padding:7px 0;border:2px solid rgba(255,255,255,.3);background:transparent;color:rgba(255,255,255,.8);border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s;text-align:center}
+.plate-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.plate-btn:active{transform:scale(.97)}
+
+/* Map */
+.map-section{position:relative;width:100%;height:50vh;min-height:280px;background:#e8e8e8}
+#mapContainer{width:100%;height:100%}
+.map-overlay{position:absolute;top:8px;right:8px;z-index:10;display:flex;flex-direction:column;gap:5px}
+.map-btn{width:36px;height:36px;border-radius:50%;border:none;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+.map-legend{position:absolute;bottom:8px;left:8px;right:8px;background:rgba(255,255,255,.95);border-radius:8px;padding:6px 10px;display:flex;gap:12px;font-size:11px;color:var(--text);box-shadow:var(--shadow);z-index:10;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:3px}
+.legend-dot{width:8px;height:8px;border-radius:50%}
+.legend-dot.red{background:var(--danger)}
+.legend-dot.green{background:var(--success)}
+.legend-dot.orange{background:var(--warning)}
+
+/* Info Panel */
+.info-panel{padding:14px 16px;padding-bottom:90px}
+.info-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
+.info-card-header{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.info-card-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:5px}
+.info-card-body{padding:12px 14px}
+
+/* Rules */
+.rule-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.rule-row:last-child{border-bottom:none}
+.rule-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.rule-icon.red{background:#fdecea}.rule-icon.green{background:#eafaf1}.rule-icon.orange{background:#fef5e7}.rule-icon.blue{background:#eaf2f8}
+.rule-content{flex:1}
+.rule-label{font-size:11px;color:var(--text-light);margin-bottom:2px}
+.rule-value{font-size:13px;font-weight:600;color:var(--text);line-height:1.4}
+.rule-tag{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;margin-top:3px}
+.rule-tag.danger{background:#fdecea;color:var(--danger)}
+.rule-tag.success{background:#eafaf1;color:var(--success)}
+.rule-tag.warning{background:#fef5e7;color:#e67e22}
+
+/* Time Table */
+.time-table{width:100%;border-collapse:collapse;font-size:12px}
+.time-table th{background:var(--bg);padding:6px 8px;text-align:left;font-weight:600;color:var(--text);font-size:11px}
+.time-table td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.time-table tr:last-child td{border-bottom:none}
+.tips-list{list-style:none}
+.tips-list li{padding:7px 0;font-size:12px;line-height:1.6;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:flex-start}
+.tips-list li:last-child{border-bottom:none}
+.tip-icon{flex-shrink:0;font-size:13px}
+
+/* Bottom Bar */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:8px 16px;padding-bottom:calc(8px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:100;box-shadow:0 -2px 10px rgba(0,0,0,.05)}
+.action-btn{flex:1;padding:10px 0;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center}
+.action-btn.primary{background:var(--primary);color:#fff}
+.action-btn.primary:active{background:var(--primary-dark);transform:scale(.98)}
+.action-btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.action-btn.secondary:active{background:#e8e8e8}
+
+/* Empty State */
+.empty-state{text-align:center;padding:36px 16px;color:var(--text-light)}
+.empty-icon{font-size:42px;margin-bottom:10px}
+.empty-text{font-size:13px}
+
+/* Loading */
+.loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;transition:opacity .3s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{margin-top:10px;font-size:13px;color:var(--text-light)}
+
+/* Toast */
+.toast{position:fixed;top:76px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--secondary);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Responsive */
+@media(min-width:768px){
+  .app-container{max-width:420px;margin:0 auto;box-shadow:0 0 30px rgba(0,0,0,.1);min-height:100vh}
+  .map-section{height:48vh}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">加载地图中...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="app-container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">&#9971;</div>
+        <div>
+          <div class="logo-text">摩友路权通</div>
+          <div class="logo-sub">摩托车限行查询 · 专注路权</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="showAbout()">关于</button>
+      </div>
+    </div>
+    <div class="selector-panel">
+      <div class="city-row">
+        <span class="city-label">城市</span>
+        <select class="city-select" id="citySelect" onchange="onCityChange()">
+          <option value="">请选择城市...</option>
+          <option value="beijing">北京</option>
+          <option value="shanghai">上海</option>
+          <option value="guangzhou">广州</option>
+          <option value="shenzhen">深圳</option>
+          <option value="chengdu">成都</option>
+          <option value="chongqing">重庆</option>
+          <option value="xian">西安</option>
+          <option value="wuhan">武汉</option>
+          <option value="hangzhou">杭州</option>
+          <option value="nanjing">南京</option>
+          <option value="tianjin">天津</option>
+          <option value="changsha">长沙</option>
+          <option value="zhengzhou">郑州</option>
+        </select>
+      </div>
+      <div class="plate-row">
+        <button class="plate-btn active" id="plateLocal" onclick="setPlate('local')">本地牌照</button>
+        <button class="plate-btn" id="plateForeign" onclick="setPlate('foreign')">外地牌照</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="map-section">
+    <div id="mapContainer"></div>
+    <div class="map-overlay">
+      <button class="map-btn" onclick="locateMe()" title="定位">&#128205;</button>
+      <button class="map-btn" onclick="resetMap()" title="重置">&#128260;</button>
+    </div>
+    <div class="map-legend">
+      <div class="legend-item"><div class="legend-dot red"></div>禁行区</div>
+      <div class="legend-item"><div class="legend-dot orange"></div>限行区</div>
+      <div class="legend-item"><div class="legend-dot green"></div>可通行</div>
+    </div>
+  </div>
+
+  <!-- Info Panel -->
+  <div class="info-panel" id="infoPanel">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">&#9971;</div>
+      <div class="empty-text">请选择城市，查询限行规则</div>
+    </div>
+    <div id="cityInfo" style="display:none"></div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div class="bottom-bar">
+    <button class="action-btn secondary" onclick="copyResult()">复制结果</button>
+    <button class="action-btn primary" onclick="sharePage()">分享给摩友</button>
+  </div>
+</div>
+
+<script>
+/* ========== CONFIG ========== */
+const TENCENT_MAP_KEY = 'NV5BZ-ZTVRB-BU7UO-JN6AI-TKHOH-4JBIV'; // ← 替换成你的腾讯地图Key
+
+/* ========== City Data ========== */
+const CITY_DATA = {
+  beijing: {
+    name: '北京', center: [116.4074, 39.9042], zoom: 10,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟢',label:'五环内',value:'本地京牌普通摩托车（蓝牌）可正常通行五环内道路'},
+      {icon:'🟡',label:'京A黄牌',value:'可进入市区，但部分路段执法尺度不一，建议绕行'},
+      {icon:'🔴',label:'长安街等核心路段',value:'长安街（新兴桥至国贸桥）全天禁止摩托车通行'},
+      {icon:'🟢',label:'五环外',value:'五环外道路不受限行约束，可正常骑行'}
+    ],
+    foreignStatus: '严格限行', foreignStatusColor: 'danger',
+    foreignRules: [
+      {icon:'🔴',label:'五环内',value:'工作日早7-9点、晚17-20点禁止在五环内行驶'},
+      {icon:'🟡',label:'六环内通行',value:'需办理进京通行证，每年最多12次，每次7天'},
+      {icon:'🔴',label:'二环内',value:'全天禁止外地摩托车进入二环内道路'},
+      {icon:'🔴',label:'长安街',value:'全天禁止所有外地摩托车通行'}
+    ],
+    tips: [
+      '✅ 本地京牌可正常在五环内行驶，无需办理通行证',
+      '⚠️ 长安街全天禁摩，注意不要误入',
+      '⚠️ 外地牌需办理进京证（"北京交警"APP可办）',
+      '⚠️ 进京证每年最多12次，每次有效期7天',
+      '📌 处罚标准：罚款100元，扣3分',
+      '📅 数据更新：2026年1月（仅供参考，以官方为准）'
+    ],
+    zone: [[116.29,39.99],[116.33,39.87],[116.38,39.80],[116.47,39.79],[116.53,39.81],[116.62,39.86],[116.70,39.91],[116.75,39.99],[116.78,40.07],[116.75,40.15],[116.68,40.18],[116.57,40.17],[116.48,40.13],[116.42,40.08],[116.38,40.03],[116.33,39.98],[116.29,39.99]]
+  },
+  shanghai: {
+    name: '上海', center: [121.4737, 31.2304], zoom: 11,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟢',label:'内环外',value:'上海本地蓝牌摩托车可在内环外自由行驶'},
+      {icon:'🟡',label:'内环内白天',value:'本地牌摩托车白天（7-20点）禁止驶入内环内地面道路'},
+      {icon:'🔴',label:'高架/隧道',value:'延安高架、南北高架、内环高架全天禁止摩托车通行'},
+      {icon:'🟢',label:'外环及以外',value:'外环外全天可通行，不受影响'}
+    ],
+    foreignStatus: '全天禁入内环', foreignStatusColor: 'danger',
+    foreignRules: [
+      {icon:'🔴',label:'内环内',value:'外地牌照摩托车全天禁止进入内环内'},
+      {icon:'🔴',label:'内环地面道路',value:'全天禁止外地摩托车驶入'},
+      {icon:'🔴',label:'高架道路',value:'延安高架/南北高架/内环高架全天禁行'},
+      {icon:'🟡',label:'外环以外',value:'部分时段可通行，但建议提前确认'}
+    ],
+    tips: [
+      '⚠️ 内环内白天（7:00-20:00）本地牌也限行',
+      '⚠️ 外地牌照在上海内环内全天禁行',
+      '✅ 外环外全天可通行，不受限行约束',
+      '⚠️ 上海摩托车牌照分沪A/沪C，沪C不能进入外环内',
+      '📌 处罚标准：罚款200元，扣3分',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[121.42,31.21],[121.45,31.18],[121.49,31.17],[121.52,31.185],[121.55,31.21],[121.56,31.25],[121.54,31.28],[121.51,31.29],[121.48,31.28],[121.45,31.26],[121.42,31.25],[121.42,31.21]]
+  },
+  guangzhou: {
+    name: '广州', center: [113.2644, 23.1291], zoom: 10,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟢',label:'广州市区',value:'本地粤A牌照摩托车在市区大部分道路可正常行驶'},
+      {icon:'🟡',label:'中心城区部分路段',value:'东风路、中山路等部分主干道分时段限行'},
+      {icon:'🔴',label:'广州塔/珠江新城核心区',value:'部分区域禁止摩托车通行'},
+      {icon:'🟢',label:'郊区/从化/增城',value:'完全不受限行约束'}
+    ],
+    foreignStatus: '严格限行', foreignStatusColor: 'danger',
+    foreignRules: [
+      {icon:'🔴',label:'中心城区',value:'外地牌照摩托车禁止进入广州中心城区'},
+      {icon:'🔴',label:'天河区/越秀区',value:'全天禁止外地摩托车通行'},
+      {icon:'🟡',label:'过境通行',value:'可走环城高速绕行，不可进入市区'},
+      {icon:'🔴',label:'大学城/广州塔',value:'全天禁止外地摩托车通行'}
+    ],
+    tips: [
+      '⚠️ 广州没有完全禁摩，但中心区部分路段限行',
+      '✅ 本地粤A牌在大部分道路可正常行驶',
+      '⚠️ 外地牌禁止进入中心城区，建议走环城高速过境',
+      '📌 处罚标准：罚款200元，扣3分',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[113.20,23.08],[113.23,23.06],[113.27,23.05],[113.31,23.06],[113.34,23.09],[113.35,23.13],[113.33,23.17],[113.30,23.19],[113.26,23.20],[113.23,23.18],[113.21,23.15],[113.20,23.12],[113.20,23.08]]
+  },
+  shenzhen: {
+    name: '深圳', center: [114.0579, 22.5431], zoom: 10,
+    localStatus: '大部分禁行', localStatusColor: 'danger',
+    localRules: [
+      {icon:'🔴',label:'福田/罗湖/南山',value:'全天禁止摩托车通行'},
+      {icon:'🔴',label:'宝安中心区',value:'全天禁止摩托车通行'},
+      {icon:'🟡',label:'龙华/龙岗部分',value:'部分道路限行，需注意路标'},
+      {icon:'🟢',label:'光明/坪山/大鹏',value:'郊区部分道路允许摩托车通行'}
+    ],
+    foreignStatus: '全天禁行', foreignStatusColor: 'danger',
+    foreignRules: [
+      {icon:'🔴',label:'全市范围',value:'外地牌照摩托车在深圳全市范围内基本禁行'},
+      {icon:'🔴',label:'不可进入任何区域',value:'外地摩托车不可进入深圳行驶'},
+      {icon:'🔴',label:'高速过境',value:'可走高速过境，但不可下高速进入市区'},
+      {icon:'🔴',label:'处罚极严',value:'罚款2000元，记3分，可扣留车辆'}
+    ],
+    tips: [
+      '⚠️ 深圳大部分区域全天禁摩，执法严格',
+      '⚠️ 驾驶摩托车进入禁行区，罚款2000元，可扣车',
+      '✅ 光明/坪山部分道路可通行，但需提前确认',
+      '📌 强烈建议：外地摩友不要骑摩托车进入深圳',
+      '📌 处罚标准：罚款2000元，记3分，可扣车',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[113.90,22.45],[113.95,22.43],[114.02,22.42],[114.10,22.44],[114.15,22.50],[114.16,22.57],[114.13,22.63],[114.07,22.65],[113.99,22.63],[113.93,22.58],[113.90,22.52],[113.90,22.45]]
+  },
+  chengdu: {
+    name: '成都', center: [104.0665, 30.5723], zoom: 10,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟢',label:'成都市区',value:'本地川A牌照摩托车可在市区大部分道路通行'},
+      {icon:'🟡',label:'三环路内高峰时段',value:'早高峰7:30-9:00、晚高峰17:00-19:00部分道路限行'},
+      {icon:'🔴',label:'天府广场周边',value:'全天禁止摩托车通行'},
+      {icon:'🟢',label:'郊区/都江堰/青城山',value:'完全不受限行约束，摩旅热门路线'}
+    ],
+    foreignStatus: '部分限行', foreignStatusColor: 'warning',
+    foreignRules: [
+      {icon:'🟡',label:'三环路内高峰',value:'外地牌照高峰时段（7:30-9:00, 17:00-19:00）禁止通行'},
+      {icon:'🟢',label:'三环外',value:'外地牌照在三环外可正常通行'},
+      {icon:'🔴',label:'天府广场核心区',value:'全天禁止外地摩托车通行'},
+      {icon:'🟢',label:'郊区景区',value:'都江堰/青城山等景区外地牌可通行'}
+    ],
+    tips: [
+      '✅ 成都对摩托车相对友好，本地牌大部分区域可通行',
+      '⚠️ 三环路内高峰时段部分道路限行，注意交通标志',
+      '✅ 成都周边摩旅路线丰富（都江堰/青城山/西岭雪山）',
+      '📌 处罚标准：罚款100元，扣3分',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[104.00,30.52],[104.03,30.50],[104.07,30.49],[104.11,30.50],[104.14,30.53],[104.15,30.57],[104.13,30.61],[104.10,30.63],[104.06,30.64],[104.03,30.62],[104.01,30.59],[104.00,30.56],[104.00,30.52]]
+  },
+  chongqing: {
+    name: '重庆', center: [106.5516, 29.5630], zoom: 10,
+    localStatus: '大部分可通行', localStatusColor: 'success',
+    localRules: [
+      {icon:'🟢',label:'市区道路',value:'本地渝牌摩托车可在市区大部分道路通行'},
+      {icon:'🟢',label:'大桥/隧道',value:'大部分桥梁和隧道允许摩托车通行（限速需注意）'},
+      {icon:'🟡',label:'部分隧道/高架',value:'真武山隧道等部分路段设有限速和监控，需注意'},
+      {icon:'🟢',label:'郊区/南山/武隆',value:'完全不受限行约束，是摩旅热门城市'}
+    ],
+    foreignStatus: '部分限行', foreignStatusColor: 'warning',
+    foreignRules: [
+      {icon:'🟢',label:'市区大部分道路',value:'外地牌照在重庆大部分区域可通行'},
+      {icon:'🟡',label:'部分隧道/桥梁',value:'真武山隧道等部分路段需注意限速'},
+      {icon:'🟢',label:'郊区景区',value:'南山/武隆等景区外地牌可通行'},
+      {icon:'🟢',label:'重庆摩旅友好',value:'重庆是摩旅天堂，外地摩友可放心前来'}
+    ],
+    tips: [
+      '✅ 重庆对摩托车非常友好，是摩旅热门城市',
+      '✅ 大部分桥梁和隧道允许摩托车通行',
+      '⚠️ 部分隧道限速较低，注意遵守交通规则',
+      '✅ 南山/武隆/仙女山等景区非常适合摩旅',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: []
+  },
+  xian: {
+    name: '西安', center: [108.9402, 34.3416], zoom: 10,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟡',label:'二环路内',value:'本地牌摩托车在二环路内部分时段限行'},
+      {icon:'🟢',label:'三环外',value:'三环外道路不受限行约束'},
+      {icon:'🔴',label:'钟楼/鼓楼核心区',value:'全天禁止摩托车通行'},
+      {icon:'🟢',label:'郊区/临潼/秦岭',value:'完全不受限行约束，摩旅路线丰富'}
+    ],
+    foreignStatus: '限行', foreignStatusColor: 'danger',
+    foreignRules: [
+      {icon:'🔴',label:'二环路内',value:'外地牌照摩托车禁止在二环路内行驶'},
+      {icon:'🟡',label:'三环内',value:'工作日高峰时段禁止外地牌在三环内行驶'},
+      {icon:'🔴',label:'钟楼核心区',value:'全天禁止外地摩托车通行'},
+      {icon:'🟢',label:'三环外/郊区',value:'外地牌在三环外可正常通行'}
+    ],
+    tips: [
+      '⚠️ 西安本地牌在二环内部分时段限行',
+      '✅ 三环外和郊区可正常通行',
+      '✅ 秦岭摩旅路线非常丰富，外地摩友推荐',
+      '📌 处罚标准：罚款200元，扣3分',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[108.90,34.30],[108.93,34.28],[108.97,34.27],[109.01,34.28],[109.04,34.31],[109.05,34.35],[109.03,34.38],[109.00,34.39],[108.97,34.38],[108.94,34.36],[108.91,34.34],[108.90,34.31],[108.90,34.30]]
+  },
+  wuhan: {
+    name: '武汉', center: [114.3055, 30.5931], zoom: 10,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟡',label:'长江大桥/隧道',value:'部分桥梁和隧道分时段禁止摩托车通行'},
+      {icon:'🟢',label:'市区道路',value:'本地鄂A牌摩托车在市区大部分道路可通行'},
+      {icon:'🔴',label:'部分核心路段',value:'长江大桥白天禁止摩托车通行'},
+      {icon:'🟢',label:'郊区/黄陂/江夏',value:'完全不受限行约束'}
+    ],
+    foreignStatus: '部分限行', foreignStatusColor: 'warning',
+    foreignRules: [
+      {icon:'🟡',label:'长江大桥/隧道',value:'外地牌在桥梁和隧道限行时段禁止通行'},
+      {icon:'🟢',label:'市区其他道路',value:'外地牌在市区大部分道路可通行'},
+      {icon:'🔴',label:'长江大桥',value:'外地牌禁止通行长江大桥'},
+      {icon:'🟢',label:'郊区',value:'外地牌在郊区可正常通行'}
+    ],
+    tips: [
+      '⚠️ 武汉长江大桥白天禁止摩托车通行',
+      '✅ 本地牌在市区大部分道路可通行',
+      '✅ 武汉周边摩旅路线丰富',
+      '📌 处罚标准：罚款100元，扣3分',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[114.23,30.53],[114.26,30.51],[114.30,30.50],[114.35,30.51],[114.38,30.55],[114.39,30.59],[114.37,30.63],[114.34,30.65],[114.30,30.66],[114.27,30.64],[114.24,30.61],[114.23,30.57],[114.23,30.53]]
+  },
+  hangzhou: {
+    name: '杭州', center: [120.1614, 30.2936], zoom: 10,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟡',label:'西湖景区/市中心',value:'本地牌在西湖景区部分路段分时段限行'},
+      {icon:'🟢',label:'市区其他道路',value:'本地浙A牌摩托车在市区大部分道路可通行'},
+      {icon:'🔴',label:'部分隧道/高架',value:'部分隧道和高架禁止摩托车通行'},
+      {icon:'🟢',label:'郊区/千岛湖',value:'完全不受限行约束，摩旅热门'}
+    ],
+    foreignStatus: '部分限行', foreignStatusColor: 'danger',
+    foreignRules: [
+      {icon:'🔴',label:'西湖景区',value:'外地牌照摩托车禁止进入西湖景区'},
+      {icon:'🟡',label:'市中心部分道路',value:'工作日高峰时段禁止外地牌在市中心行驶'},
+      {icon:'🟢',label:'郊区/千岛湖',value:'外地牌在郊区可正常通行'},
+      {icon:'🟡',label:'需关注最新政策',value:'杭州限行政策变动较频繁，请关注最新公告'}
+    ],
+    tips: [
+      '⚠️ 西湖景区外地牌禁止进入',
+      '✅ 本地浙A牌在大部分区域可通行',
+      '✅ 千岛湖/黄山方向摩旅路线非常适合',
+      '📌 处罚标准：罚款100元，扣3分',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[120.08,30.25],[120.11,30.23],[120.15,30.22],[120.19,30.23],[120.22,30.26],[120.23,30.30],[120.21,30.34],[120.18,30.36],[120.14,30.37],[120.11,30.35],[120.09,30.32],[120.08,30.28],[120.08,30.25]]
+  },
+  nanjing: {
+    name: '南京', center: [118.7969, 32.0603], zoom: 10,
+    localStatus: '部分限行', localStatusColor: 'warning',
+    localRules: [
+      {icon:'🟡',label:'中山陵/钟山景区',value:'本地牌在部分景区路段限行'},
+      {icon:'🟢',label:'市区道路',value:'本地苏A牌摩托车在市区大部分道路可通行'},
+      {icon:'🔴',label:'部分隧道/高架',value:'部分隧道和高架禁止摩托车通行'},
+      {icon:'🟢',label:'郊区/紫金山/江宁',value:'完全不受限行约束'}
+    ],
+    foreignStatus: '部分限行', foreignStatusColor: 'warning',
+    foreignRules: [
+      {icon:'🟡',label:'市区部分路段',value:'外地牌照在市区部分路段限行'},
+      {icon:'🟢',label:'郊区',value:'外地牌在郊区可正常通行'},
+      {icon:'🟢',label:'南京摩旅友好',value:'南京周边摩旅路线较丰富'},
+      {icon:'🟡',label:'建议关注最新政策',value:'南京限行政策有一定变动，需关注'}
+    ],
+    tips: [
+      '✅ 南京对摩托车相对友好',
+      '⚠️ 部分景区路段限行，注意交通标志',
+      '✅ 紫金山/江宁等郊区非常适合骑行',
+      '📌 处罚标准：罚款100元，扣3分',
+      '📅 数据更新：2026年1月'
+    ],
+    zone: [[118.73,32.03],[118.76,32.01],[118.80,32.00],[118.84,32.01],[118.87,32.04],[118.88,32.08],[118.86,32.11],[118.83,32.13],[118.79,32.14],[118.76,32.12],[118.74,32.09],[118.73,32.06],[118.73,32.03]]
+  }
+};
+
+/* ========== State ========== */
+let currentCity = null;
+let currentPlate = 'local';
+let map = null;
+let polygon = null;
+
+/* ========== Init Map ========== */
+function initMap() {
+  if (typeof qq === 'undefined') {
+    console.error('腾讯地图 SDK 未加载');
+    showToast('地图加载失败，请检查网络');
+    hideLoading();
+    return;
+  }
+  try {
+    map = new qq.maps.Map(document.getElementById('mapContainer'), {
+      center: new qq.maps.LatLng(35.86, 104.195),
+      zoom: 5,
+      mapTypeId: qq.maps.MapTypeId.ROADMAP,
+      zoomControl: false,
+      panControl: false
+    });
+    hideLoading();
+  } catch(e) {
+    console.error('地图初始化失败:', e);
+    hideLoading();
+    showToast('地图初始化失败');
+  }
+}
+
+/* ========== City Change ========== */
+function onCityChange() {
+  const val = document.getElementById('citySelect').value;
+  if (!val || !CITY_DATA[val]) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('cityInfo').style.display = 'none';
+    clearPolygon();
+    return;
+  }
+  currentCity = val;
+  renderCityInfo();
+  renderMapZone();
+}
+
+/* ========== Plate Switch ========== */
+function setPlate(type) {
+  currentPlate = type;
+  document.getElementById('plateLocal').classList.toggle('active', type === 'local');
+  document.getElementById('plateForeign').classList.toggle('active', type === 'foreign');
+  if (currentCity) renderCityInfo();
+}
+
+/* ========== Render City Info ========== */
+function renderCityInfo() {
+  const city = CITY_DATA[currentCity];
+  if (!city) return;
+  const rule = currentPlate === 'local' ? city.localRules : city.foreignRules;
+  const status = currentPlate === 'local' ? city.localStatus : city.foreignStatus;
+  const statusColor = currentPlate === 'local' ? city.localStatusColor : city.foreignStatusColor;
+
+  let rulesHTML = rule.map(r => `
+    <div class="rule-row">
+      <div class="rule-icon ${r.icon === '🔴' ? 'red' : r.icon === '🟢' ? 'green' : 'orange'}">${r.icon}</div>
+      <div class="rule-content">
+        <div class="rule-label">${r.label}</div>
+        <div class="rule-value">${r.value}</div>
+      </div>
+    </div>
+  `).join('');
+
+  let tipsHTML = city.tips.map(t => {
+    const icon = t.startsWith('✅') ? '✅' : t.startsWith('⚠️') ? '⚠️' : t.startsWith('❌') ? '❌' : t.startsWith('📌') ? '📌' : t.startsWith('📅') ? '📅' : '•';
+    return `<li class="tips-list-li"><span class="tip-icon">${icon}</span><span>${t.replace(/^./, '').trim()}</span></li>`;
+  }).join('');
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('cityInfo').style.display = 'block';
+  document.getElementById('cityInfo').innerHTML = `
+    <div class="info-card">
+      <div class="info-card-header">
+        <div class="info-card-title">&#128205; ${city.name} · ${currentPlate === 'local' ? '本地牌照' : '外地牌照'}</div>
+        <span class="rule-tag ${statusColor === 'danger' ? 'danger' : statusColor === 'success' ? 'success' : 'warning'}">${status}</span>
+      </div>
+      <div class="info-card-body">
+        ${rulesHTML}
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-header">
+        <div class="info-card-title">&#128221; 注意事项</div>
+      </div>
+      <div class="info-card-body">
+        <ul class="tips-list">${tipsHTML}</ul>
+      </div>
+    </div>
+  `;
+}
+
+/* ========== Render Map Zone ========== */
+function renderMapZone() {
+  clearPolygon();
+  const city = CITY_DATA[currentCity];
+  if (!city || !city.zone || city.zone.length === 0) {
+    if (map && city) {
+      map.panTo(new qq.maps.LatLng(city.center[1], city.center[0]));
+      map.zoomTo(city.zoom);
+    }
+    return;
+  }
+  const paths = city.zone.map(p => new qq.maps.LatLng(p[1], p[0]));
+  polygon = new qq.maps.Polygon({
+    map: map,
+    path: paths,
+    strokeColor: '#e74c3c',
+    strokeWeight: 2,
+    fillColor: new qq.maps.Color(231, 76, 60, 0.25),
+    editable: false
+  });
+  if (map && city) {
+    map.panTo(new qq.maps.LatLng(city.center[1], city.center[0]));
+    map.zoomTo(city.zoom);
+  }
+}
+
+function clearPolygon() {
+  if (polygon) {
+    polygon.setMap(null);
+    polygon = null;
+  }
+}
+
+/* ========== Map Controls ========== */
+function locateMe() {
+  if (!navigator.geolocation) { showToast('浏览器不支持定位'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    if (map) map.panTo(new qq.maps.LatLng(lat, lng));
+    showToast('定位成功');
+  }, err => showToast('定位失败，请允许定位权限'));
+}
+
+function resetMap() {
+  if (currentCity && CITY_DATA[currentCity]) {
+    const city = CITY_DATA[currentCity];
+    if (map) {
+      map.panTo(new qq.maps.LatLng(city.center[1], city.center[0]));
+      map.zoomTo(city.zoom);
+    }
+    renderMapZone();
+  } else {
+    if (map) {
+      map.panTo(new qq.maps.LatLng(35.86, 104.195));
+      map.zoomTo(5);
+    }
+    clearPolygon();
+  }
+}
+
+/* ========== Actions ========== */
+function copyResult() {
+  if (!currentCity) { showToast('请先选择城市'); return; }
+  const city = CITY_DATA[currentCity];
+  const rule = currentPlate === 'local' ? city.localRules : city.foreignRules;
+  const plateStr = currentPlate === 'local' ? '本地牌照' : '外地牌照';
+  let text = `【摩友路权通】${city.name}摩托车限行查询结果\n`;
+  text += `牌照类型：${plateStr}\n`;
+  text += `整体状态：${currentPlate === 'local' ? city.localStatus : city.foreignStatus}\n\n`;
+  rule.forEach(r => { text += `${r.icon} ${r.label}：${r.value}\n`; });
+  text += `\n——数据来源：摩友路权通（仅供参考，以官方为准）`;
+  navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板')).catch(() => showToast('复制失败，请手动复制'));
+}
+
+function sharePage() {
+  if (!currentCity) { showToast('请先选择城市'); return; }
+  const city = CITY_DATA[currentCity];
+  const plateStr = currentPlate === 'local' ? '本地牌照' : '外地牌照';
+  const shareText = `【摩友路权通】${city.name}${plateStr}限行规则查询，快来看看你是不是也在限行区！`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(shareText).then(() => showToast('分享文案已复制，快去分享给摩友！'));
+  } else {
+    showToast('请截图分享给摩友');
+  }
+}
+
+function showAbout() {
+  showToast('摩友路权通 v1.0 — 专注摩托车限行查询，数据仅供参考，以官方为准');
+}
+
+/* ========== Utils ========== */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function hideLoading() {
+  const el = document.getElementById('loading');
+  if (el) el.classList.add('hidden');
+}
+
+/* ========== Bootstrap ========== */
+window.onload = function() {
+  // 动态加载腾讯地图SDK
+  const script = document.createElement('script');
+  const key = TENCENT_MAP_KEY === 'YOUR_TENCENT_MAP_KEY_HERE' ? 'OB4BZ-D4W3U-B7VVO-4PJWW-6TKDJ-WPB77' : TENCENT_MAP_KEY;
+  script.src = `https://map.qq.com/api/js?v=2.exp&key=${key}&callback=initMap`;
+  script.onerror = function() {
+    hideLoading();
+    showToast('地图SDK加载失败，请检查网络或Key');
+  };
+  document.head.appendChild(script);
+};
+</script>
+</body>
+</html>
